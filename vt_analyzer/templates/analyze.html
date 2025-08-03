@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .result.clean {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .result.danger {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+        .stat-card.malicious {
+            border-left-color: #dc3545;
+        }
+        .stat-card.suspicious {
+            border-left-color: #ffc107;
+        }
+        .stat-card.clean {
+            border-left-color: #28a745;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #f5c6cb;
+            margin-top: 20px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+        }
+        .engines-details {
+            margin-top: 20px;
+        }
+        .engines-details summary {
+            cursor: pointer;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .engines-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .engine-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .engine-item:last-child {
+            border-bottom: none;
+        }
+        .status-malicious {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .status-clean {
+            color: #28a745;
+        }
+        .status-suspicious {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+<div class="container">
+        <h1>Analyse avec VirusTotal</h1>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.input_value.id_for_label }}">URL, Adresse IP ou Hash :</label>
+                {{ form.input_value }}
+               
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.file.id_for_label }}">Ou télécharger un fichier :</label>
+                {{ form.file }}
+            </div>
+            
+            <button type="submit">Analyser</button>
+        </form>
+
+        {% if error_message %}
+            <div class="error">
+                <strong>❌ Erreur :</strong> {{ error_message }}
+            </div>
+        {% endif %}
+
+        {% if result %}
+            <div class="result">
+                <h2>Résultat de l'analyse :</h2>
+                
+                {% if result.data %}
+                    {% with stats=result.data.attributes.last_analysis_stats %}
+                        
+                        <!-- En-tête avec le nom/URL analysé -->
+                        {% if result.data.attributes.title %}
+                            <h3> Analyse de : {{ result.data.attributes.title }}</h3>
+                        {% elif result.data.attributes.url %}
+                            <h3> Analyse de : {{ result.data.attributes.url }}</h3>
+                        {% else %}
+                            <h3> Analyse du fichier</h3>
+                        {% endif %}
+                        
+                        {% if stats %}
+                            <!-- Statistiques principales -->
+                            <div class="stats-grid">
+                                <div class="stat-card malicious">
+                                    <div class="stat-number">{{ stats.malicious|default:0 }}</div>
+                                    <div class="stat-label"> Malveillant</div>
+                                </div>
+                                <div class="stat-card suspicious">
+                                    <div class="stat-number">{{ stats.suspicious|default:0 }}</div>
+                                    <div class="stat-label"> Suspect</div>
+                                </div>
+                                <div class="stat-card clean">
+                                    <div class="stat-number">{{ stats.harmless|default:0 }}</div>
+                                    <div class="stat-label"> Inoffensif</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number">{{ stats.undetected|default:0 }}</div>
+                                    <div class="stat-label"> Non détecté</div>
+                                </div>
+                            </div>
+
+                            <!-- Analyse et recommandations -->
+                            {% if stats.malicious > 0 %}
+                                <div class="result danger">
+                                    <h3> MENACE DÉTECTÉE - DANGER !</h3>
+                                    <p><strong>{{ stats.malicious }}</strong> moteur(s) ont identifié ce contenu comme <strong>MALVEILLANT</strong>.</p>
+                                    <p><strong>Recommandation :</strong> ❌ <strong>NE PAS UTILISER</strong> ce contenu. Il présente un risque élevé pour votre sécurité.</p>
+                                </div>
+                            {% elif stats.suspicious > 3 %}
+                                <div class="result warning">
+                                    <h3>⚠️ CONTENU TRÈS SUSPECT</h3>
+                                    <p><strong>{{ stats.suspicious }}</strong> moteur(s) considèrent ce contenu comme suspect.</p>
+                                    <p><strong>Recommandation :</strong> ⚠️ <strong>ÉVITER</strong> d'utiliser ce contenu. Niveau de risque élevé.</p>
+                                </div>
+                            {% elif stats.suspicious > 0 %}
+                                <div class="result warning">
+                                    <h3>⚠️ CONTENU SUSPECT</h3>
+                                    <p><strong>{{ stats.suspicious }}</strong> moteur(s) marquent ce contenu comme suspect.</p>
+                                    <p><strong>Recommandation :</strong> ⚠️ Utiliser avec <strong>PRUDENCE</strong>. Vérifier la source.</p>
+                                </div>
+                            {% else %}
+                                <div class="result clean">
+                                    <h3>✅ CONTENU SÉCURISÉ</h3>
+                                    <p>Aucune menace détectée par <strong>{{ stats.harmless }}</strong> moteur(s) d'analyse.</p>
+                                    <p><strong>Recommandation :</strong> ✅ Ce contenu semble <strong>SÛR</strong> à utiliser.</p>
+                                </div>
+                            {% endif %}
+
+                            <!-- Score de confiance -->
+                            {% with total_engines=stats.malicious|add:stats.suspicious|add:stats.harmless|add:stats.undetected %}
+                                <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                                    <h4> Score de sécurité</h4>
+                                    <div style="background: #e9ecef; border-radius: 20px; height: 20px; margin: 10px 0;">
+                                        {% widthratio stats.harmless total_engines 100 as clean_percent %}
+                                        <div style="background: {% if stats.malicious > 0 %}#dc3545{% elif stats.suspicious > 0 %}#ffc107{% else %}#28a745{% endif %}; width: {{ clean_percent }}%; height: 100%; border-radius: 20px; transition: width 0.3s;"></div>
+                                    </div>
+                                    <p>
+                                        <strong>{{ clean_percent }}% des moteurs</strong> considèrent ce contenu comme sûr
+                                        <small>({{ stats.harmless }}/{{ total_engines }} moteurs)</small>
+                                    </p>
+                                </div>
+                            {% endwith %}
+
+                            <!-- Informations supplémentaires -->
+                            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                                <h4> Informations détaillées</h4>
+                                
+                                {% if result.data.attributes.last_analysis_date %}
+                                    <p><strong> Date d'analyse :</strong> 
+                                    {{ result.data.attributes.last_analysis_date|date:"d/m/Y à H:i" }}</p>
+                                {% endif %}
+                                
+                                {% if result.data.attributes.times_submitted %}
+                                    <p><strong> Nombre d'analyses :</strong> {{ result.data.attributes.times_submitted }} fois</p>
+                                {% endif %}
+                                
+                                {% if result.data.attributes.reputation %}
+                                    <p><strong> Réputation :</strong> {{ result.data.attributes.reputation }}/100</p>
+                                {% endif %}
+                                
+                                {% if result.data.attributes.total_votes %}
+                                    <p><strong> Votes communauté :</strong> 
+                                    {{ result.data.attributes.total_votes.harmless }} positifs, 
+                                    {{ result.data.attributes.total_votes.malicious }} négatifs</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Catégories détectées -->
+                            {% if result.data.attributes.categories %}
+                                <div style="margin: 20px 0; padding: 15px; background: #e7f3ff; border-radius: 6px;">
+                                    <h4> Catégories identifiées</h4>
+                                    <ul>
+                                        {% for vendor, category in result.data.attributes.categories.items %}
+                                            <li><strong>{{ vendor }} :</strong> {{ category }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+
+                            <!-- Détails des moteurs (optionnel) -->
+                            {% if result.data.attributes.last_analysis_results %}
+                                <details class="engines-details">
+                                    <summary> Détails techniques - Résultats par moteur ({{ result.data.attributes.last_analysis_results|length }} moteurs)</summary>
+                                    <div class="engines-list">
+                                        {% for engine_name, engine_result in result.data.attributes.last_analysis_results.items %}
+                                            <div class="engine-item">
+                                                <span><strong>{{ engine_name }}</strong></span>
+                                                <span class="status-{{ engine_result.category }}">
+                                                    {% if engine_result.category == "malicious" %}
+                                                         {{ engine_result.result|default:"Malveillant" }}
+                                                    {% elif engine_result.category == "suspicious" %}
+                                                         {{ engine_result.result|default:"Suspect" }}
+                                                    {% elif engine_result.category == "undetected" %}
+                                                         Non détecté
+                                                    {% else %}
+                                                         Propre
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            {% endif %}
+                        {% else %}
+                            <!-- Affichage d'urgence si pas de stats -->
+                            <div class="error">
+                                <h3> Données incomplètes</h3>
+                                <p>L'analyse n'a pas retourné de statistiques complètes. Voici les données disponibles :</p>
+                                <pre>{{ result|pprint }}</pre>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% else %}
+                    <!-- Si pas de data, il y a probablement une erreur -->
+                    <div class="error">
+                        <strong> Erreur dans la réponse de l'API :</strong>
+                        <pre>{{ result }}</pre>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Auto-clear form after successful analysis
+        {% if result and not error_message %}
+            document.querySelector('form').reset();
+        {% endif %}
+    </script>
+</body>
+</html>
