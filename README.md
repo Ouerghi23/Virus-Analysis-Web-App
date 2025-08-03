@@ -72,8 +72,9 @@ It provides security scores, reputation information, and detailed results from 7
 - **Free tier**: 4 requests per minute
 - **File size limit**: 32MB
 - **Supported file types**: All file types supported by VirusTotal
-🤝 Contact
-Developed by Chaima Ouerghi
+  
+##🤝 Contact
+Developed by **Chaima Ouerghi**
 
 Email: shaymaouerghi0@gmail.com
 
